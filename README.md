@@ -1,8 +1,10 @@
 # RuView Home Assistant
 
-**Public beta · Experimental observations, not validated occupancy detection.**
+**Experimental observations, not validated occupancy detection.**
 
 A small Python bridge from an existing RuView collector to Home Assistant MQTT discovery. It publishes fresh per-node presence, motion, classification and RSSI observations, with optional edge flags and server-module diagnostics. It never infers room occupancy from aggregate counts or default coordinates.
+
+Select a tag from [Releases](https://github.com/ha-homelab/ruview-home-assistant/releases): `-beta.N` identifies a beta, `-rc.N` a release candidate, and a tag without a prerelease suffix a stable software release. Verify the release's [signed asset inventory](docs/release-signatures.md) for that tag before installation. Stable software does not establish validated occupancy detection or sensing accuracy.
 
 ![Synthetic replay showing freshness and placement gates](docs/replay-demo.png)
 
@@ -52,7 +54,7 @@ Unverified classifications and possible-fall flags are unsuitable for emergency 
 - [Payload contract v1](docs/payload-contract-v1.md)
 - [Python API and migration](docs/python-api.md)
 - [Troubleshooting](docs/troubleshooting.md)
-- [Beta scope and evaluation](docs/beta.md)
+- [Scope and limitations](docs/beta.md)
 - [Contributing](CONTRIBUTING.md), [security reporting](SECURITY.md), [changelog](CHANGELOG.md)
 
 ## Develop and package

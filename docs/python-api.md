@@ -18,7 +18,7 @@ config = Config(
 # bridge = Bridge(mqtt_client, config)
 ```
 
-Stable beta entry points retain positional compatibility:
+The following entry points retain positional compatibility:
 
 - `observations(health, latest, fleet, now, fleet_elapsed_ms=0, latest_elapsed_ms=0)` returns a per-node mapping; it never performs I/O.
 - `node_placements(raw_json)`, `EdgeFalls.ingest(message, now)`, `EdgeFalls.observations(fresh_nodes, now)` and `EdgeFalls.clear()` retain their signatures.

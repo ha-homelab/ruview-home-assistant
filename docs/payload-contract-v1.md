@@ -1,6 +1,6 @@
 # Payload contract v1
 
-The contracts below describe the beta package's accepted collector shape and emitted MQTT messages. No upstream semantic-version compatibility is assumed. Test your collector against these fields. Unknown upstream diagnostic fields are discarded.
+The contracts below describe the package's accepted collector shape and emitted MQTT messages. No upstream semantic-version compatibility is assumed. Test your collector against these fields. Unknown upstream diagnostic fields are discarded.
 
 ## Collector input
 
@@ -40,4 +40,4 @@ At most 16 nodes, 64 algorithms per node and 4096 input events are accepted. Out
 
 ## Evolution
 
-The schemas under `schemas/` describe emitted envelopes and attributes. Additive diagnostic fields may appear in v1; consumers should ignore unknown fields. Incompatible units, identity or freshness semantics require a new contract version. During beta, release notes will call out interface changes. Replay input/result use `ruview.replay.v1` and `ruview.replay-result.v1`; neither is live sensing evidence.
+The schemas under `schemas/` describe emitted envelopes and attributes. Additive diagnostic fields may appear in v1; consumers should ignore unknown fields. Incompatible units, identity or freshness semantics require a new contract version. Release notes call out interface changes. Replay input/result use `ruview.replay.v1` and `ruview.replay-result.v1`; neither is live sensing evidence.
