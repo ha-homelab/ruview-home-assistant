@@ -264,7 +264,7 @@ wheels = [
 
 [[package]]
 name = "ruview-home-assistant"
-version = "0.1.0b1"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "paho-mqtt" },
