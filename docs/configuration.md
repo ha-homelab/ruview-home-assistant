@@ -10,6 +10,8 @@ All settings are environment variables, or fields on `ruview_home_assistant.Conf
 
 `RUVIEW_WS_URL` is an optional explicit WS(S) endpoint, for example `ws://collector.example.invalid:3001/ws/sensing`. Empty disables edge flags. There is intentionally no inferred WebSocket port. Accepted `edge_vitals` flags remain experimental, and are gated by the independent current node observation.
 
+Use final endpoints: HTTP and WebSocket redirects are rejected. JSON inputs reject duplicate object keys and nonfinite floating-point values. Invalid input makes observations unavailable; it does not become a negative observation.
+
 `RUVIEW_MODULES_URL` optionally points to a separate server-module producer whose `/v1/latest` response follows `ruview.server-modules.v1`. Empty disables this adapter. The producer is not included. Module requests do not send the collector bearer token. Supply this service only on a suitably trusted network or behind an authenticated local proxy. Its failure cannot block collector polling.
 
 ## MQTT
@@ -40,5 +42,7 @@ For multiple bridges on one broker, give each a distinct topic prefix, identifie
 ```
 
 Each entry requires boolean `valid` and nonempty `measurement_location`; `valid: true` also requires a nonempty `configured_room`. Set a real node to valid only after verifying its physical identity and position. Unconfirmed placement leaves presence, motion and possible-fall Home Assistant entities unavailable, while fresh diagnostic classification and signal data remain inspectable. Raw state messages may still exist, so custom MQTT consumers must honor the placement availability topic themselves.
+
+Keys use canonical decimal node IDs (`"1"` through `"255"`). Duplicate keys, leading zeroes, signs, whitespace in keys, and blank location/room names are rejected. See [operations](operations.md) before renaming nodes or removing retained discovery.
 
 `room_coverage_validation` always remains `unverified`. This package does not turn a placement confirmation into an accuracy claim. Location labels are published in MQTT attributes; choose labels appropriate for everyone with access to your broker.

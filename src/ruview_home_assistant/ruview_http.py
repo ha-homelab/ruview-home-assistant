@@ -1,7 +1,34 @@
 # SPDX-License-Identifier: MIT
 """Bounded HTTP content decoding shared by the Python worker consumers."""
 
+import json
+import math
 import zlib
+
+
+def strict_json(raw):
+    """Reject ambiguous keys and numbers that cannot be safely evaluated."""
+
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError("duplicate_json_key")
+            result[key] = value
+        return result
+
+    def number(raw):
+        value = float(raw)
+        if not math.isfinite(value):
+            raise ValueError("nonfinite_json_number")
+        return value
+
+    try:
+        return json.loads(
+            raw, object_pairs_hook=pairs, parse_float=number, parse_constant=number
+        )
+    except RecursionError:
+        raise ValueError("json_nesting_too_deep") from None
 
 
 def decode_http_body(raw: bytes, content_encoding: str | None, max_bytes: int) -> bytes:
