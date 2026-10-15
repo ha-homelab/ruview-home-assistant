@@ -23,9 +23,12 @@ def strict_json(raw):
             raise ValueError("nonfinite_json_number")
         return value
 
-    return json.loads(
-        raw, object_pairs_hook=pairs, parse_float=number, parse_constant=number
-    )
+    try:
+        return json.loads(
+            raw, object_pairs_hook=pairs, parse_float=number, parse_constant=number
+        )
+    except RecursionError:
+        raise ValueError("json_nesting_too_deep") from None
 
 
 def decode_http_body(raw: bytes, content_encoding: str | None, max_bytes: int) -> bytes:

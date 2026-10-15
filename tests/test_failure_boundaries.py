@@ -63,6 +63,12 @@ class FailureBoundaryTests(unittest.TestCase):
             with self.subTest(raw=raw), self.assertRaises(ValueError):
                 strict_json(raw)
 
+    def test_parser_recursion_failure_is_a_handled_input_error(self):
+        # Still below the 1 MiB wire bound. Python 3.14 accepts deeper JSON
+        # than 3.11, so exercise a depth that exceeds both parser limits.
+        with self.assertRaisesRegex(ValueError, "json_nesting_too_deep"):
+            strict_json("[" * 100_000 + "0" + "]" * 100_000)
+
     def test_websocket_redirects_cannot_change_the_observation_source(self):
         for status in (300, 301, 302, 303, 307, 308):
             for destination in ("/other-stream", "ws://other.example.invalid/stream"):
