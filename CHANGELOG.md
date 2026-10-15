@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — beta series, 2026-10-15
+## [0.1.0] - 2026-10-15
 
 Initial public beta:
 
@@ -11,3 +11,18 @@ Initial public beta:
 - Offline tests and source ZIP, sdist and wheel release tooling.
 
 No occupancy-accuracy claim, live installation evidence, private configuration, firmware or anomaly engine is included.
+
+### Upgrade
+
+This is the first public beta series. Install the published Python wheel or build
+the documented Docker image, then supply instance-specific upstream and MQTT
+settings. Existing private integrations should use the documented compatibility
+API and explicit WebSocket URL when edge events are required.
+
+### Security
+
+Configure verified TLS and secret files where supported. HTTP redirects are
+rejected to keep observations and bearer credentials at their configured origin.
+Freshness and placement gates remain mandatory; these experimental signals are
+not validated for safety decisions. No credentials or real installation evidence
+are included in the release.
