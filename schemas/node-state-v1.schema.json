@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ha-homelab/ruview-home-assistant/schemas/node-state-v1.schema.json",
+  "title": "node-state-v1",
+  "type": "object",
+  "required": [
+    "presence",
+    "motion",
+    "classification",
+    "signal"
+  ],
+  "properties": {
+    "presence": {
+      "enum": [
+        "ON",
+        "OFF"
+      ]
+    },
+    "motion": {
+      "enum": [
+        "ON",
+        "OFF"
+      ]
+    },
+    "classification": {
+      "enum": [
+        "absent",
+        "present_still",
+        "present_moving"
+      ]
+    },
+    "signal": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -120,
+      "maximum": 0
+    }
+  },
+  "additionalProperties": false
+}

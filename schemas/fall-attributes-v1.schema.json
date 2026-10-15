@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ha-homelab/ruview-home-assistant/schemas/fall-attributes-v1.schema.json",
+  "title": "fall-attributes-v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "node_id",
+    "source",
+    "validation",
+    "edge_age_ms",
+    "hold_seconds",
+    "placement_valid"
+  ],
+  "properties": {
+    "schema": {
+      "const": "ruview.ha.fall-attributes.v1"
+    },
+    "node_id": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255
+    },
+    "placement_valid": {
+      "type": "boolean"
+    },
+    "measurement_location": {
+      "type": "string"
+    },
+    "configured_room": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "room_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "room_coverage_validation": {
+      "const": "unverified"
+    },
+    "source": {
+      "const": "esp32_edge_vitals"
+    },
+    "validation": {
+      "const": "unverified_heuristic"
+    },
+    "edge_age_ms": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "hold_seconds": {
+      "const": 10
+    }
+  }
+}
