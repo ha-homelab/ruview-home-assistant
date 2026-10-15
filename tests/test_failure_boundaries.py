@@ -64,10 +64,52 @@ class FailureBoundaryTests(unittest.TestCase):
                 strict_json(raw)
 
     def test_parser_recursion_failure_is_a_handled_input_error(self):
-        # Still below the 1 MiB wire bound. Python 3.14 accepts deeper JSON
-        # than 3.11, so exercise a depth that exceeds both parser limits.
-        with self.assertRaisesRegex(ValueError, "json_nesting_too_deep"):
-            strict_json("[" * 100_000 + "0" + "]" * 100_000)
+        # Parser recursion limits differ across Python builds and platforms.
+        with (
+            patch(
+                "ruview_home_assistant.ruview_http.json.loads",
+                side_effect=RecursionError,
+            ),
+            self.assertRaisesRegex(ValueError, "json_nesting_too_deep"),
+        ):
+            strict_json("{}")
+
+    def test_parser_recursion_failure_goes_offline_then_recovers(self):
+        bridge = Bridge(Mock(), Config())
+        bridge.client.is_connected.return_value = True
+        bridge.client.publish.return_value.rc = 0
+        response = Mock()
+        response.read.return_value = b"{}"
+        response.headers.get.return_value = None
+        bridge.opener = Mock()
+        bridge.opener.open.return_value.__enter__ = Mock(return_value=response)
+        bridge.opener.open.return_value.__exit__ = Mock(return_value=False)
+        bridge.update_observations = Mock()
+        ticks = []
+
+        def wait(previous, period):
+            ticks.append(previous)
+            if len(ticks) == 2:
+                bridge.stopped.set()
+            return previous + period
+
+        bridge.wait_for_poll = wait
+        with (
+            patch(
+                "ruview_home_assistant.ruview_http.json.loads",
+                side_effect=[RecursionError, {}, {}, {}],
+            ),
+            self.assertLogs(level="WARNING") as logs,
+        ):
+            bridge.run()
+        bridge.client.publish.assert_called_once_with(
+            "ruview/home/availability", "offline", qos=1, retain=True
+        )
+        bridge.update_observations.assert_called_once()
+        self.assertEqual(len(ticks), 2)
+        self.assertEqual(
+            logs.output, ["WARNING:root:Observation unavailable (ValueError)"]
+        )
 
     def test_websocket_redirects_cannot_change_the_observation_source(self):
         for status in (300, 301, 302, 303, 307, 308):
