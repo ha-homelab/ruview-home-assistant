@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ruview-home-assistant"
+version = "0.1.0b1"
+description = "Experimental, freshness-gated RuView observations for Home Assistant MQTT discovery"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE", "LICENSES/*.txt"]
+authors = [{name = "ha-homelab contributors"}]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Topic :: Home Automation",
+]
+dependencies = ["paho-mqtt==2.1.0", "websockets==17.2"]
+
+[project.optional-dependencies]
+dev = ["build==1.2.2.post1", "ruff==0.16.5", "jsonschema==4.23.0"]
+
+[project.scripts]
+ruview-home-assistant = "ruview_home_assistant.bridge:main"
+ruview-replay = "ruview_home_assistant.replay:main"
+
+[project.urls]
+Repository = "https://github.com/ha-homelab/ruview-home-assistant"
+Issues = "https://github.com/ha-homelab/ruview-home-assistant/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B"]

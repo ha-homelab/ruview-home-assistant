@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ha-homelab/ruview-home-assistant/schemas/module-observation-v1.schema.json",
+  "title": "module-observation-v1",
+  "type": "object",
+  "required": [
+    "state",
+    "attributes"
+  ],
+  "properties": {
+    "state": {
+      "enum": [
+        "experimental",
+        "waiting_for_eligible_input"
+      ]
+    },
+    "attributes": {
+      "type": "object",
+      "required": [
+        "schema",
+        "node_id",
+        "published_at_ns",
+        "recognition_validated",
+        "freshness_limit_ms",
+        "events",
+        "algorithms"
+      ],
+      "properties": {
+        "schema": {
+          "const": "ruview.ha.server-modules.v1"
+        },
+        "node_id": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 255
+        },
+        "placement_valid": {
+          "type": "boolean"
+        },
+        "measurement_location": {
+          "type": "string"
+        },
+        "configured_room": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "room_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "room_coverage_validation": {
+          "const": "unverified"
+        },
+        "published_at_ns": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "recognition_validated": {
+          "const": false
+        },
+        "validation": {
+          "const": "unverified_algorithm_outputs"
+        },
+        "source": {
+          "const": "esp32"
+        },
+        "execution": {
+          "const": "server"
+        },
+        "freshness_limit_ms": {
+          "const": 2000
+        },
+        "events": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "required": [
+              "occurrence_seq",
+              "event_id",
+              "age_ms",
+              "fresh",
+              "recognition_validated"
+            ],
+            "properties": {
+              "occurrence_seq": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$"
+              },
+              "event_id": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$"
+              },
+              "age_ms": {
+                "type": "number",
+                "minimum": 0
+              },
+              "fresh": {
+                "type": "boolean"
+              },
+              "recognition_validated": {
+                "const": false
+              }
+            }
+          }
+        },
+        "algorithms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

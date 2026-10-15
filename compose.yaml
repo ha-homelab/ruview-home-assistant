@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT
+services:
+  bridge:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    # Add read-only mounts for MQTT CA certificates or *_FILE secrets if used.

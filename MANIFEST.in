@@ -1,0 +1,11 @@
+include version LICENSE README.md CHANGELOG.md SECURITY.md CONTRIBUTING.md THIRD_PARTY_NOTICES.md Dockerfile compose.yaml .env.example
+recursive-include docs *.md *.png *.html
+recursive-include examples *.json *.jsonl
+recursive-include schemas *.json
+recursive-include tests *.py *.json
+recursive-include scripts *.py *.sh
+
+recursive-include LICENSES *.txt
+
+include RELEASING.md .release-policy.json uv.lock
+recursive-include .github *.py *.yml *.yaml *.txt
