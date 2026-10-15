@@ -12,6 +12,12 @@ Initial public beta:
 
 No occupancy-accuracy claim, live installation evidence, private configuration, firmware or anomaly engine is included.
 
+Release candidate hardening:
+
+- Continue polling when MQTT rejects the fallback offline publication during a disconnect or full queue.
+- Reject ambiguous placement/JSON fields and WebSocket redirects; safely reject oversized numeric values.
+- Document exact-release deployment, rollback, retained discovery cleanup and the distinction between software stability and experimental sensing.
+
 ### Upgrade
 
 This is the first public beta series. Install the published Python wheel or build

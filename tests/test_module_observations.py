@@ -302,9 +302,9 @@ class ModuleObservationsTests(unittest.TestCase):
         clock = [100.0]
         original_loads, original_decode = json.loads, modules.decode
 
-        def slow_loads(value):
+        def slow_loads(value, **kwargs):
             clock[0] += 0.6
-            return original_loads(value)
+            return original_loads(value, **kwargs)
 
         def slow_decode(value, received_wall_ns):
             clock[0] += 1.351

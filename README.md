@@ -48,6 +48,7 @@ Unverified classifications and possible-fall flags are unsuitable for emergency 
 ## Documentation
 
 - [Configuration and placement](docs/configuration.md)
+- [Deployment, upgrades, reconnects and cleanup](docs/operations.md)
 - [Payload contract v1](docs/payload-contract-v1.md)
 - [Python API and migration](docs/python-api.md)
 - [Troubleshooting](docs/troubleshooting.md)

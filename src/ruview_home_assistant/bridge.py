@@ -16,7 +16,7 @@ import urllib.request
 
 from . import module_observations
 from .config import Config
-from .ruview_http import decode_http_body
+from .ruview_http import decode_http_body, strict_json
 
 PREFIX = "ruview/home"
 MAX_AGE_MS = 10000
@@ -44,21 +44,31 @@ class RejectRedirects(urllib.request.HTTPRedirectHandler):
 
 def node_placements(raw):
     """Fail closed for missing/unverified placement; preserve raw diagnostics."""
-    config = json.loads(raw)
+    config = strict_json(raw)
     if not isinstance(config, dict):
         raise ValueError("Node placements must be an object")
     result = {}
     for key, value in config.items():
         node_id = int(key)
-        if not 1 <= node_id <= 255 or not isinstance(value, dict):
+        if (
+            str(node_id) != key
+            or not 1 <= node_id <= 255
+            or not isinstance(value, dict)
+        ):
             raise ValueError("Invalid node placement")
         valid = value.get("valid")
         location = value.get("measurement_location")
         room = value.get("configured_room")
-        if type(valid) is not bool or not isinstance(location, str) or not location:
+        if (
+            type(valid) is not bool
+            or not isinstance(location, str)
+            or not location.strip()
+        ):
             raise ValueError("Placement needs explicit validity and location")
-        if valid and (not isinstance(room, str) or not room):
+        if valid and (not isinstance(room, str) or not room.strip()):
             raise ValueError("Valid placement needs a configured room")
+        if room is not None and (not isinstance(room, str) or not room.strip()):
+            raise ValueError("Configured room must be a nonempty string")
         result[node_id] = {
             "placement_valid": valid,
             "measurement_location": location,
@@ -118,11 +128,14 @@ class EdgeFalls:
 
 
 def finite_number(value):
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(value)
-    )
+    try:
+        return (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and math.isfinite(value)
+        )
+    except OverflowError:
+        return False
 
 
 def fresh_age(value):
@@ -339,7 +352,7 @@ class Bridge:
                 raw = decode_http_body(
                     raw, encoding, module_observations.MAX_RESPONSE_BYTES
                 )
-                decoded = module_observations.decode(json.loads(raw), received_wall_ns)
+                decoded = module_observations.decode(strict_json(raw), received_wall_ns)
                 snapshot = (decoded, received)
             except (
                 OSError,
@@ -428,7 +441,19 @@ class Bridge:
         url = self.config.websocket_url
         if not url:
             return
-        from websockets.sync.client import connect
+        from websockets.exceptions import InvalidStatus
+        from websockets.sync.client import ClientConnection, connect
+
+        class FixedEndpointConnection(ClientConnection):
+            def handshake(self, *args, **kwargs):
+                try:
+                    return super().handshake(*args, **kwargs)
+                except InvalidStatus as error:
+                    if 300 <= error.response.status_code < 400:
+                        raise ValueError(
+                            "WebSocket redirects are not allowed"
+                        ) from None
+                    raise
 
         while not self.stopped.is_set():
             try:
@@ -439,6 +464,7 @@ class Bridge:
                     close_timeout=2,
                     max_size=2**20,
                     proxy=None,
+                    create_connection=FixedEndpointConnection,
                 ) as ws:
                     while not self.stopped.is_set():
                         try:
@@ -447,7 +473,7 @@ class Bridge:
                             continue
                         try:
                             self.edge_falls.ingest(
-                                json.loads(message), time.monotonic()
+                                strict_json(message), time.monotonic()
                             )
                         except (ValueError, TypeError):
                             continue
@@ -469,7 +495,7 @@ class Bridge:
         with self.opener.open(request, timeout=3) as response:
             raw = response.read(module_observations.MAX_RESPONSE_BYTES + 1)
             encoding = response.headers.get("Content-Encoding")
-        decoded = json.loads(
+        decoded = strict_json(
             decode_http_body(raw, encoding, module_observations.MAX_RESPONSE_BYTES)
         )
         if not isinstance(decoded, dict):
@@ -616,7 +642,17 @@ class Bridge:
                 # Never log credentials, request headers, or live payloads.
                 logging.warning("Observation unavailable (%s)", type(error).__name__)
                 if self.client.is_connected():
-                    self.publish(f"{self.prefix}/availability", "offline", retain=True)
+                    try:
+                        self.publish(
+                            f"{self.prefix}/availability", "offline", retain=True
+                        )
+                    except OSError as publish_error:
+                        # A disconnect or full queue can race is_connected().
+                        # Keep polling so paho can reconnect and rediscover.
+                        logging.warning(
+                            "MQTT availability unavailable (%s)",
+                            type(publish_error).__name__,
+                        )
             # Reserve lease headroom without adding request time to every period.
             next_poll = self.wait_for_poll(next_poll, period)
 

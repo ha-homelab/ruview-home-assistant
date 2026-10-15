@@ -39,8 +39,8 @@ def decimal(value):
 def number(value, lower=0, upper=1e15):
     if (
         type(value) not in (int, float)
-        or not math.isfinite(value)
         or not lower <= value <= upper
+        or not math.isfinite(value)
     ):
         raise ValueError("Invalid finite number")
     return value
