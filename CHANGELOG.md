@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0b1 — 2026-10-15
+## 0.1.0 — beta series, 2026-10-15
 
 Initial public beta:
 
