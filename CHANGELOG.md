@@ -2,6 +2,8 @@
 
 ## Unreleased security maintenance
 
+- Replace the container's bundled pip with the hash-verified 26.2.1 wheel before dependency installation, and require an actual image build with offline production replay in CI. Other base-image findings remain under review.
+
 - Add an opt-in verified strict TLS policy shared by HTTPS, WSS and MQTT;
   reject plaintext endpoints in the strict profile and preserve stronger host policy.
 - Update the build backend to setuptools 83.0.0, including the Unicode MANIFEST normalization fix for GHSA-h35f-9h28-mq5c, and document stable/private support.
