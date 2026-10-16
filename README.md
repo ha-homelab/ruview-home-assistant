@@ -1,5 +1,7 @@
 # RuView Home Assistant
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15577/badge)](https://www.bestpractices.dev/projects/15577)
+
 **Experimental observations, not validated occupancy detection.**
 
 A small Python bridge from an existing RuView collector to Home Assistant MQTT discovery. It publishes fresh per-node presence, motion, classification and RSSI observations, with optional edge flags and server-module diagnostics. It never infers room occupancy from aggregate counts or default coordinates.

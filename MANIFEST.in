@@ -9,3 +9,5 @@ recursive-include LICENSES *.txt
 
 include RELEASING.md .release-policy.json uv.lock
 recursive-include .github *.py *.yml *.yaml *.txt
+
+include GOVERNANCE.md CODE_OF_CONDUCT.md ROADMAP.md
