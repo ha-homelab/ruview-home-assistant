@@ -27,3 +27,26 @@ git ls-files -z -- '*.py' | xargs -0 python3 -m ruff check --isolated --select F
 The recorded review used the equivalent explicit tracked-file list with a clean
 `git archive` extraction, so ignored, untracked or modified working files could
 not affect the result. No test, query or warning suppression was introduced.
+
+## Container installer maintenance, 2026-10-16
+
+The Dockerfile pins the previously selected Python 3.12 slim base by its immutable
+multi-platform digest, then replaces its bundled pip 25.0.1 with the official
+pip 26.2.1 wheel before resolving or building project dependencies. The bootstrap
+accepts only the exact universal wheel hash in
+[`container/requirements-installer.txt`](../container/requirements-installer.txt),
+uses no dependency resolution or source build, and disables the installer version
+check. Subsequent installation runs the new pip and finishes with `pip check`.
+
+Required CI builds the documented image on Linux amd64 and checks its actual pip
+version, non-root UID, runtime imports and all five synthetic production replay
+cases with networking disabled and a read-only root filesystem. This does not
+claim live MQTT/RuView or device acceptance. The source distribution retains the
+bootstrap requirements so its Dockerfile remains usable.
+
+This update addresses the old installer; it is not a clean bill of health for the
+base image. The dated base review identified other Debian library/utility findings
+that require individual applicability or remediation review. Existing setuid
+utilities and independently deployed services are not cleared merely because the
+application runs as UID 10001. The package installation still uses normal isolated
+build-backend resolution and does not establish a complete locked OS/build graph.

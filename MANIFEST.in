@@ -16,3 +16,5 @@ include GOVERNANCE.md CODE_OF_CONDUCT.md ROADMAP.md
 recursive-include .github/cosign *
 recursive-include .github/gh *.json LICENSE
 recursive-include scripts *.go
+
+recursive-include container *.txt
