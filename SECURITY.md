@@ -13,3 +13,5 @@ The optional [strict transport profile](docs/strict-tls.md) requires encrypted
 transports and a stronger verified certificate-chain policy across all owned
 HTTP, WebSocket and MQTT clients. Default trusted-local-network operation may
 use plaintext and does not provide equivalent confidentiality.
+
+The vendored release helpers have a separate [verified release-client TLS profile](docs/release-tls-profile.md).
