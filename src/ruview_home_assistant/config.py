@@ -60,6 +60,7 @@ class Config:
     mqtt_client_id: str = "ruview-home-bridge"
     mqtt_username: str = field(default="", repr=False)
     mqtt_password: str = field(default="", repr=False)
+    strict_tls: bool = False
     mqtt_tls: bool = False
     mqtt_ca_certs: str | None = None
     mqtt_certfile: str | None = None
@@ -72,6 +73,15 @@ class Config:
         _url(self.upstream_url, {"http", "https"}, "RUVIEW_URL")
         _url(self.modules_url, {"http", "https"}, "RUVIEW_MODULES_URL", optional=True)
         _url(self.websocket_url, {"ws", "wss"}, "RUVIEW_WS_URL", optional=True)
+        if type(self.strict_tls) is not bool:
+            raise ValueError("strict_tls must be a boolean")
+        if self.strict_tls and (
+            urlsplit(self.upstream_url).scheme != "https"
+            or (self.modules_url and urlsplit(self.modules_url).scheme != "https")
+            or (self.websocket_url and urlsplit(self.websocket_url).scheme != "wss")
+            or not self.mqtt_tls
+        ):
+            raise ValueError("Strict TLS requires HTTPS/WSS endpoints and MQTT_TLS")
         if any(type(n) is not int or not 1 <= n <= 255 for n in self.node_ids):
             raise ValueError("Configured firmware node IDs must be in 1..255")
         if type(self.mqtt_port) is not int or not 1 <= self.mqtt_port <= 65535:
@@ -120,6 +130,7 @@ class Config:
             mqtt_username=env.get("MQTT_USERNAME", ""),
             mqtt_password=_secret(env, "MQTT_PASSWORD"),
             mqtt_tls=tls,
+            strict_tls=_boolean(env, "RUVIEW_STRICT_TLS"),
             mqtt_ca_certs=env.get("MQTT_CA_CERTS") or None,
             mqtt_certfile=env.get("MQTT_CERTFILE") or None,
             mqtt_keyfile=env.get("MQTT_KEYFILE") or None,

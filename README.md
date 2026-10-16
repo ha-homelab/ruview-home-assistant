@@ -66,3 +66,5 @@ python3 scripts/build_release.py
 ```
 
 Checks are offline and synthetic. The release builder creates a source ZIP, installable source distribution, wheel and SHA-256 checksum file in `dist/`. Dependencies and build tools may be downloaded during packaging. No publishing occurs. See [dependency notices](THIRD_PARTY_NOTICES.md) for licenses; project-owned code is MIT licensed.
+
+For encrypted deployments see the [strict transport profile](docs/strict-tls.md).

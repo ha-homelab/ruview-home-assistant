@@ -17,6 +17,7 @@ import urllib.request
 from . import module_observations
 from .config import Config
 from .ruview_http import decode_http_body, strict_json
+from .tls import client_context
 
 PREFIX = "ruview/home"
 MAX_AGE_MS = 10000
@@ -316,7 +317,11 @@ class Bridge:
         self.last_discovery = 0
         self.last_primary_update = None
         self.opener = urllib.request.build_opener(
-            urllib.request.ProxyHandler({}), RejectRedirects()
+            urllib.request.ProxyHandler({}),
+            RejectRedirects(),
+            urllib.request.HTTPSHandler(
+                context=client_context(strict=self.config.strict_tls)
+            ),
         )
         self.base = self.config.upstream_url.rstrip("/")
         self.token = self.config.api_token
@@ -332,7 +337,11 @@ class Bridge:
         if not self.module_url:
             return
         opener = urllib.request.build_opener(
-            urllib.request.ProxyHandler({}), RejectRedirects()
+            urllib.request.ProxyHandler({}),
+            RejectRedirects(),
+            urllib.request.HTTPSHandler(
+                context=client_context(strict=self.config.strict_tls)
+            ),
         )
         next_poll = time.monotonic()
         while not self.stopped.is_set():
@@ -459,6 +468,9 @@ class Bridge:
             try:
                 with connect(
                     url,
+                    ssl=client_context(strict=self.config.strict_tls)
+                    if url.startswith("wss:")
+                    else None,
                     additional_headers=self.auth_headers(),
                     open_timeout=5,
                     close_timeout=2,
@@ -662,9 +674,7 @@ def configure_mqtt(client, config):
     if config.mqtt_username:
         client.username_pw_set(config.mqtt_username, config.mqtt_password or None)
     if config.mqtt_tls:
-        import ssl
-
-        context = ssl.create_default_context(cafile=config.mqtt_ca_certs)
+        context = client_context(strict=config.strict_tls, cafile=config.mqtt_ca_certs)
         if config.mqtt_certfile:
             context.load_cert_chain(config.mqtt_certfile, config.mqtt_keyfile)
         client.tls_set_context(context)
