@@ -11,3 +11,8 @@ include RELEASING.md .release-policy.json uv.lock
 recursive-include .github *.py *.yml *.yaml *.txt
 
 include GOVERNANCE.md CODE_OF_CONDUCT.md ROADMAP.md
+
+# The source archive retains the complete reviewed release-client inputs.
+recursive-include .github/cosign *
+recursive-include .github/gh *.json LICENSE
+recursive-include scripts *.go
