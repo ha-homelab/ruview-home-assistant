@@ -50,3 +50,23 @@ that require individual applicability or remediation review. Existing setuid
 utilities and independently deployed services are not cleared merely because the
 application runs as UID 10001. The package installation still uses normal isolated
 build-backend resolution and does not establish a complete locked OS/build graph.
+
+## Container native library maintenance, 2026-10-16
+
+The pinned base includes `liblzma5` before Debian's fix for
+[DSA-6549-1](https://security-tracker.debian.org/tracker/DSA-6549-1), which covers
+[GHSA-5qpq-xqfv-j9pg](https://github.com/tukaani-project/xz/security/advisories/GHSA-5qpq-xqfv-j9pg).
+The Dockerfile upgrades that existing library to the exact security revision
+`5.8.1-1+deb13u2` through the base image's signed Debian repositories, retains
+normal APT authentication, installs no recommended packages and removes package
+manager caches. An unavailable revision fails the build instead of selecting an
+unreviewed replacement. The official Python base digest is unchanged.
+
+The required Linux container job still runs the production replay with no network,
+a read-only root filesystem, no capabilities and no new privileges. It also scans
+the actual resulting image using Trivy 0.74.0, verifies the exact patched library
+and absence of the XZ advisory, and retains the complete JSON finding report and
+CycloneDX SBOM as `container-security-evidence`. The report includes all severities
+and unfixed findings. Other findings require individual review; the scan is not
+presented as a clean bill of health for every installed package. Existing source
+security checks remain required independently.
