@@ -1,5 +1,7 @@
 # RuView Home Assistant
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15577/badge)](https://www.bestpractices.dev/projects/15577)
+
 **Experimental observations, not validated occupancy detection.**
 
 A small Python bridge from an existing RuView collector to Home Assistant MQTT discovery. It publishes fresh per-node presence, motion, classification and RSSI observations, with optional edge flags and server-module diagnostics. It never infers room occupancy from aggregate counts or default coordinates.
@@ -66,3 +68,5 @@ python3 scripts/build_release.py
 ```
 
 Checks are offline and synthetic. The release builder creates a source ZIP, installable source distribution, wheel and SHA-256 checksum file in `dist/`. Dependencies and build tools may be downloaded during packaging. No publishing occurs. See [dependency notices](THIRD_PARTY_NOTICES.md) for licenses; project-owned code is MIT licensed.
+
+For encrypted deployments see the [strict transport profile](docs/strict-tls.md).

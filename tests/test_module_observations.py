@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 
 from ruview_home_assistant import module_observations as modules
 from ruview_home_assistant.bridge import Bridge, module_discovery
+from ruview_home_assistant.config import Config
 
 
 class ModuleObservationsTests(unittest.TestCase):
@@ -147,6 +148,7 @@ class ModuleObservationsTests(unittest.TestCase):
 
     def publication_bridge(self):
         bridge = Bridge.__new__(Bridge)
+        bridge.config = Config()
         bridge.module_url = "http://worker.invalid"
         bridge.module_lock = threading.Lock()
         bridge.module_snapshot = (self.decoded(), 100)
