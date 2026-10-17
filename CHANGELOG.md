@@ -1,12 +1,20 @@
 # Changelog
 
-## Unreleased security maintenance
+## [0.1.1] - 2026-10-17
 
-- Replace the container's bundled pip with the hash-verified 26.2.1 wheel before dependency installation, and require an actual image build with offline production replay in CI. Other base-image findings remain under review.
+### Changed
 
-- Add an opt-in verified strict TLS policy shared by HTTPS, WSS and MQTT;
-  reject plaintext endpoints in the strict profile and preserve stronger host policy.
-- Update the build backend to setuptools 83.0.0, including the Unicode MANIFEST normalization fix for GHSA-h35f-9h28-mq5c, and document stable/private support.
+- Add an optional verified strict TLS policy shared by HTTPS, WSS and MQTT clients.
+- Update setuptools to 83.0.0, bootstrap the hash-verified pip 26.2.1 wheel in the container and use qualified canonical release clients.
+- Apply the Debian XZ security revision, retain the image SBOM and require an actual container build with offline production replay in CI.
+
+### Upgrade
+
+Install the verified Python distribution or rebuild the documented container from this source release. Preserve instance-specific upstream and MQTT settings and the previous image or package for rollback. Enable the strict transport profile only for compatible verified endpoints. Publication does not deploy the bridge.
+
+### Security
+
+Strict mode rejects plaintext endpoints and preserves stronger host policy. Packaging and container changes include the setuptools Unicode MANIFEST normalization fix (GHSA-h35f-9h28-mq5c), reviewed Debian XZ security updates and locked artifact verification. Synthetic replay does not establish occupancy accuracy, device firmware safety or live installation acceptance.
 
 ## [0.1.0] - 2026-10-15
 
