@@ -3,5 +3,5 @@
 
 from .config import Config
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = ["Config", "__version__"]
