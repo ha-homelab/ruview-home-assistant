@@ -9,6 +9,8 @@
   cached CSI, inference or collector snapshot ages.
 - Share the default unverified-placement attributes across primary and module
   publications so both paths retain identical conservative placement semantics.
+- Complete the opt-in approval/merge path with the shared metadata-only merger,
+  requiring the current review and CI gate before a normal squash merge.
 
 ### Upgrade
 
