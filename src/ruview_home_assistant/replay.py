@@ -85,7 +85,9 @@ def replay(frame):
     current = observations(
         frame["health"], frame["latest"], frame["fleet"], frame["now"]
     )
-    bridge.update(current)
+    # Processing is instantaneous on the synthetic replay clock. Real bridges
+    # retain the monotonic default and account for time spent publishing.
+    bridge.update(current, clock=lambda: 0)
     by_topic = {message["topic"]: message["payload"] for message in sink.messages}
     fresh = by_topic["ruview/home/node1/availability"] == "online"
     placed = by_topic["ruview/home/node1/placement/availability"] == "online"

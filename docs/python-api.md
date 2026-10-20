@@ -28,6 +28,19 @@ The following entry points retain positional compatibility:
 
 Thin application wrappers can import these functions/classes directly and invoke `bridge.main()` for a command-line process. Avoid wildcard exports and editing package globals: configure each `Bridge` independently. Patch tests at the implementation path, for example `ruview_home_assistant.bridge.time.monotonic`, rather than at a re-exporting wrapper.
 
+`Bridge.update(current, observed_at=None)` additionally accepts the monotonic time
+at which the input ages were evaluated. `update_observations` forwards its original
+anchor through module and discovery work. Each node is checked again before
+payload publication and before its availability decision; stale data makes both
+its primary and edge-fall availability offline. Edge age is independently checked
+before publishing its online availability.
+Direct callers that cache a mapping must pass its original monotonic anchor.
+Primary attributes include additive `snapshot_age_ms` alongside CSI and inference
+ages. This accounts for processing before publication; it does not establish a
+bound on downstream broker or subscriber delivery time. Offline replay supplies
+the optional keyword-only `clock` callable; runtime callers should retain the
+default monotonic clock.
+
 ## Moving an existing installation
 
 Pin the package to a reviewed version. Keep your service credentials, broker addresses, collector deployment, node/room inventory, automations and any private analytical engines in your own deployment repository. Install the package as a dependency and replace copied generic modules with imports; do not publish private overlays as examples.

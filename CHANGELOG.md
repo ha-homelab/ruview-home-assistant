@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.1.3] - 2026-10-20
+
+### Fixed
+
+- Recheck each node's primary and edge-fall freshness after module processing,
+  discovery and earlier MQTT publications. Processing time no longer renews
+  cached CSI, inference or collector snapshot ages.
+- Share the default unverified-placement attributes across primary and module
+  publications so both paths retain identical conservative placement semantics.
+
+### Upgrade
+
+The `0.1.3-beta` series is for evaluation. Existing MQTT topics, discovery IDs
+and positional calls remain compatible. Primary attributes add
+`snapshot_age_ms`; cached direct calls to `Bridge.update` can supply their
+original monotonic `observed_at` timestamp. Preserve the previous verified
+package or image for rollback.
+
+### Security
+
+Regression tests use synthetic clocks and payloads. Freshness accounting before
+publication does not prove end-to-end MQTT delivery latency or recognition
+accuracy. This release does not validate posture, coordinates or fall detection
+and does not deploy or change device firmware.
+
 ## [0.1.2] - 2026-10-18
 
 ### Changed
