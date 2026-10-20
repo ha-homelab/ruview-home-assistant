@@ -11,6 +11,9 @@
   publications so both paths retain identical conservative placement semantics.
 - Complete the opt-in approval/merge path with the shared metadata-only merger,
   requiring the current review and CI gate before a normal squash merge.
+- Keep the container installer lock, qualified release-client sources and
+  licenses, and governance documents in both packaged source distributions.
+  Those inputs were present in Git but omitted from the release staging filter.
 
 ### Upgrade
 
