@@ -71,6 +71,11 @@
       "type": "number",
       "minimum": 0,
       "maximum": 10000
+    },
+    "snapshot_age_ms": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10000
     }
   }
 }

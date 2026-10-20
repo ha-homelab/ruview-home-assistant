@@ -326,7 +326,9 @@ class PublicationCadenceTests(unittest.TestCase):
                 clock[0] += 1
 
         bridge.update_modules = Mock(side_effect=slow_modules)
-        bridge.update = Mock(side_effect=lambda _: primary_times.append(clock[0]))
+        bridge.update = Mock(
+            side_effect=lambda _, **kwargs: primary_times.append(clock[0])
+        )
         with patch(
             "ruview_home_assistant.bridge.time.monotonic", side_effect=lambda: clock[0]
         ):
@@ -334,6 +336,210 @@ class PublicationCadenceTests(unittest.TestCase):
                 clock[0] = tick
                 bridge.update_observations({})
         self.assertEqual(primary_times, [101.0, 103.0])
+
+    def test_slow_publication_does_not_renew_primary_or_fall_observations(self):
+        from ruview_home_assistant.config import Config
+
+        for slow_stage in (
+            "modules",
+            "discovery",
+            "placement",
+            "fall",
+            "state",
+            "attributes",
+        ):
+            for age_key in ("csi_age_ms", "inference_age_ms", "snapshot_age_ms"):
+                with self.subTest(stage=slow_stage, age=age_key):
+                    clock = [100.0]
+                    client = Mock()
+                    client.publish.return_value.rc = 0
+                    bridge = Bridge(client, Config(node_ids=(1,)))
+                    bridge.last_discovery = clock[0]
+                    bridge.rediscover.clear()
+                    bridge.edge_falls.ingest(
+                        {"type": "edge_vitals", "node_id": 1, "fall_detected": True},
+                        clock[0],
+                    )
+                    current = {
+                        1: {
+                            "presence": "ON",
+                            "motion": "ON",
+                            "classification": "present_moving",
+                            "signal": -60,
+                            "csi_age_ms": 0,
+                            "inference_age_ms": 0,
+                            "snapshot_age_ms": 0,
+                        }
+                    }
+                    current[1][age_key] = 9900
+                    original = copy.deepcopy(current)
+
+                    def delay(*args, clock=clock, **kwargs):
+                        clock[0] += 0.2
+
+                    if slow_stage == "modules":
+                        bridge.update_modules = Mock(side_effect=delay)
+                    elif slow_stage == "discovery":
+                        bridge.rediscover.set()
+                        bridge.announce = Mock(side_effect=delay)
+                    else:
+                        topic = (
+                            "ruview/home/node1/"
+                            + {
+                                "placement": "placement/availability",
+                                "fall": "fall/attributes",
+                                "state": "state",
+                                "attributes": "attributes",
+                            }[slow_stage]
+                        )
+
+                        def publish(
+                            published_topic, *args, topic=topic, delay=delay, **kwargs
+                        ):
+                            if published_topic == topic:
+                                delay()
+                            return Mock(rc=0)
+
+                        client.publish.side_effect = publish
+                    with patch(
+                        "ruview_home_assistant.bridge.time.monotonic",
+                        side_effect=lambda clock=clock: clock[0],
+                    ):
+                        bridge.update_observations(current, observed_at=100.0)
+                    by_topic = {
+                        call.args[0]: call.args[1]
+                        for call in client.publish.call_args_list
+                    }
+                    if slow_stage not in {"state", "attributes"}:
+                        self.assertNotIn("ruview/home/node1/state", by_topic)
+                    self.assertEqual(
+                        by_topic["ruview/home/node1/availability"], "offline"
+                    )
+                    self.assertEqual(
+                        by_topic["ruview/home/node1/fall/availability"], "offline"
+                    )
+                    self.assertEqual(current, original)
+
+    def test_slow_edge_publication_does_not_renew_edge_freshness(self):
+        from ruview_home_assistant.config import Config
+
+        clock = [100.0]
+        client = Mock()
+        bridge = Bridge(client, Config(node_ids=(1,)))
+        bridge.last_discovery = 100
+        bridge.edge_falls.ingest(
+            {"type": "edge_vitals", "node_id": 1, "fall_detected": True}, 90.1
+        )
+        current = {
+            1: {
+                "presence": "ON",
+                "motion": "ON",
+                "classification": "present_moving",
+                "signal": -60,
+                "csi_age_ms": 0,
+                "inference_age_ms": 0,
+            }
+        }
+
+        def publish(topic, *args, **kwargs):
+            if topic == "ruview/home/node1/fall/attributes":
+                clock[0] += 0.2
+            return Mock(rc=0)
+
+        client.publish.side_effect = publish
+        with patch(
+            "ruview_home_assistant.bridge.time.monotonic",
+            side_effect=lambda: clock[0],
+        ):
+            bridge.update(current, observed_at=100)
+        client.publish.assert_any_call(
+            "ruview/home/node1/availability", "online", qos=1, retain=True
+        )
+        fall_availability = [
+            call.args[1]
+            for call in client.publish.call_args_list
+            if call.args[0] == "ruview/home/node1/fall/availability"
+        ]
+        self.assertEqual(fall_availability, ["offline"])
+
+    def test_slow_primary_publication_expires_an_independent_edge_lease(self):
+        from ruview_home_assistant.config import Config
+
+        for delayed_topic in ("state", "attributes"):
+            with self.subTest(topic=delayed_topic):
+                clock = [100.0]
+                client = Mock()
+                bridge = Bridge(client, Config(node_ids=(1,)))
+                bridge.last_discovery = 100
+                bridge.edge_falls.ingest(
+                    {"type": "edge_vitals", "node_id": 1, "fall_detected": True},
+                    90.1,
+                )
+                current = {
+                    1: {
+                        "presence": "ON",
+                        "motion": "ON",
+                        "classification": "present_moving",
+                        "signal": -60,
+                        "csi_age_ms": 0,
+                        "inference_age_ms": 0,
+                    }
+                }
+
+                def publish(
+                    topic, *args, delayed_topic=delayed_topic, clock=clock, **kwargs
+                ):
+                    if topic == "ruview/home/node1/" + delayed_topic:
+                        clock[0] += 0.2
+                    return Mock(rc=0)
+
+                client.publish.side_effect = publish
+                with patch(
+                    "ruview_home_assistant.bridge.time.monotonic",
+                    side_effect=lambda clock=clock: clock[0],
+                ):
+                    bridge.update(current, observed_at=100)
+                client.publish.assert_any_call(
+                    "ruview/home/node1/availability", "online", qos=1, retain=True
+                )
+                fall_availability = [
+                    call.args[1]
+                    for call in client.publish.call_args_list
+                    if call.args[0] == "ruview/home/node1/fall/availability"
+                ]
+                self.assertEqual(fall_availability, ["online", "offline"])
+
+    def test_primary_attributes_include_elapsed_publication_time(self):
+        import json
+
+        from ruview_home_assistant.config import Config
+
+        client = Mock()
+        client.publish.return_value.rc = 0
+        bridge = Bridge(client, Config(node_ids=(1,)))
+        bridge.last_discovery = 100
+        current = {
+            1: {
+                "presence": "ON",
+                "motion": "ON",
+                "classification": "present_moving",
+                "signal": -60,
+                "csi_age_ms": 100,
+                "inference_age_ms": 200,
+                "snapshot_age_ms": 300,
+            }
+        }
+        with patch("ruview_home_assistant.bridge.time.monotonic", return_value=101):
+            bridge.update(current, observed_at=100)
+        by_topic = {
+            call.args[0]: call.args[1] for call in client.publish.call_args_list
+        }
+        attributes = json.loads(by_topic["ruview/home/node1/attributes"])
+        self.assertEqual(attributes["csi_age_ms"], 1100)
+        self.assertEqual(attributes["inference_age_ms"], 1200)
+        self.assertEqual(attributes["snapshot_age_ms"], 1300)
+        self.assertEqual(by_topic["ruview/home/node1/availability"], "online")
+        self.assertEqual(current[1]["csi_age_ms"], 100)
 
     def test_poll_cadence_subtracts_work_and_skips_missed_ticks(self):
         bridge = Bridge.__new__(Bridge)

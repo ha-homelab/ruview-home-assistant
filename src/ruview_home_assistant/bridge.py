@@ -34,6 +34,13 @@ FALL_HOLD_SECONDS = 10
 MODULE_POLL_SECONDS = 0.5
 PRIMARY_POLL_SECONDS = 2.0
 PLACEMENT_ENTITIES = {"presence", "motion", "fall_detected"}
+UNKNOWN_PLACEMENT = {
+    "placement_valid": False,
+    "measurement_location": "unknown",
+    "configured_room": None,
+    "room_id": None,
+    "room_coverage_validation": "unverified",
+}
 
 
 class RejectRedirects(urllib.request.HTTPRedirectHandler):
@@ -214,8 +221,26 @@ def observations(health, latest, fleet, now, fleet_elapsed_ms=0, latest_elapsed_
             "node_id": node_id,
             "csi_age_ms": csi_age,
             "inference_age_ms": inference_age,
+            "snapshot_age_ms": (now - timestamp) * 1000,
         }
     return result
+
+
+def aged_observation(state, elapsed_ms):
+    """Advance the original ages without renewing a cached primary observation."""
+    if not finite_number(elapsed_ms) or elapsed_ms < 0:
+        raise ValueError("Invalid observation age")
+    if state is None:
+        return None
+    ages = {
+        key: state.get(key)
+        for key in ("csi_age_ms", "inference_age_ms", "snapshot_age_ms")
+        if key != "snapshot_age_ms" or key in state
+    }
+    if not all(fresh_age(value) for value in ages.values()):
+        return None
+    ages = {key: value + elapsed_ms for key, value in ages.items()}
+    return {**state, **ages} if all(map(fresh_age, ages.values())) else None
 
 
 def discovery(
@@ -431,16 +456,7 @@ class Bridge:
                             if key != "state"
                         },
                         "published_at_ns": str(published_at_ns),
-                        **self.placements.get(
-                            node_id,
-                            {
-                                "placement_valid": False,
-                                "measurement_location": "unknown",
-                                "configured_room": None,
-                                "room_id": None,
-                                "room_coverage_validation": "unverified",
-                            },
-                        ),
+                        **self.placements.get(node_id, UNKNOWN_PLACEMENT),
                     },
                 },
             )
@@ -543,34 +559,32 @@ class Bridge:
         self.last_discovery = time.monotonic()
         self.rediscover.clear()
 
-    def update(self, current):
+    def update(self, current, observed_at=None, *, clock=None):
+        clock = time.monotonic if clock is None else clock
+        observed_at = clock() if observed_at is None else observed_at
         new = set(current) - self.known
         self.known.update(current)
-        if (
-            new
-            or self.rediscover.is_set()
-            or time.monotonic() - self.last_discovery > 60
-        ):
+        if new or self.rediscover.is_set() or clock() - self.last_discovery > 60:
             self.announce()
         self.publish(f"{self.prefix}/availability", "online", retain=True)
-        falls = self.edge_falls.observations(current, time.monotonic())
         for node_id in self.known:
             base = f"{self.prefix}/node{node_id}"
-            placement = self.placements.get(
-                node_id,
-                {
-                    "placement_valid": False,
-                    "measurement_location": "unknown",
-                    "configured_room": None,
-                    "room_id": None,
-                    "room_coverage_validation": "unverified",
-                },
-            )
+            placement = self.placements.get(node_id, UNKNOWN_PLACEMENT)
             self.publish(
                 f"{base}/placement/availability",
                 "online" if placement["placement_valid"] else "offline",
                 retain=True,
             )
+            # Discovery, module work, and earlier nodes may have consumed the
+            # remaining lifetime. Each node keeps the original sample anchor.
+            sampled_at = clock()
+            state = aged_observation(
+                current.get(node_id), (sampled_at - observed_at) * 1000
+            )
+            falls = self.edge_falls.observations(
+                () if state is None else (node_id,), sampled_at
+            )
+            fall_online = False
             if node_id in falls:
                 fall = falls[node_id]
                 self.publish(
@@ -583,19 +597,53 @@ class Bridge:
                         **placement,
                     },
                 )
-                self.publish(f"{base}/fall/availability", "online", retain=True)
+                fall_published_at = clock()
+                core_fresh = aged_observation(
+                    current.get(node_id), (fall_published_at - observed_at) * 1000
+                )
+                fall_fresh = self.edge_falls.observations(
+                    () if core_fresh is None else (node_id,), fall_published_at
+                )
+                fall_online = node_id in fall_fresh
+                self.publish(
+                    f"{base}/fall/availability",
+                    "online" if fall_online else "offline",
+                    retain=True,
+                )
             else:
                 self.publish(f"{base}/fall/availability", "offline", retain=True)
-            if node_id not in current:
+            # An edge publication can also take time. Recheck before sending
+            # primary state, including removing any just-published fall lease.
+            state = aged_observation(
+                current.get(node_id), (clock() - observed_at) * 1000
+            )
+            if state is None:
+                if fall_online:
+                    self.publish(f"{base}/fall/availability", "offline", retain=True)
                 self.publish(f"{base}/availability", "offline", retain=True)
                 continue
-            state = current[node_id]
             self.publish(f"{base}/state", {k: state[k] for k in ENTITIES})
             self.publish(
                 f"{base}/attributes",
                 {**{k: v for k, v in state.items() if k not in ENTITIES}, **placement},
             )
-            self.publish(f"{base}/availability", "online", retain=True)
+            # Primary payload work may outlive the independent edge lease even
+            # while CSI and inference remain fresh.
+            if fall_online and node_id not in self.edge_falls.observations(
+                (node_id,), clock()
+            ):
+                self.publish(f"{base}/fall/availability", "offline", retain=True)
+                fall_online = False
+            state = aged_observation(
+                current.get(node_id), (clock() - observed_at) * 1000
+            )
+            if state is None and fall_online:
+                self.publish(f"{base}/fall/availability", "offline", retain=True)
+            self.publish(
+                f"{base}/availability",
+                "online" if state is not None else "offline",
+                retain=True,
+            )
 
     def update_observations(self, current, observed_at=None):
         # Publish the short module lease before ordinary discovery/state work.
@@ -609,7 +657,7 @@ class Bridge:
             self.last_primary_update is None
             or now - self.last_primary_update >= PRIMARY_POLL_SECONDS
         ):
-            self.update(current)
+            self.update(current, observed_at=core_observed_at)
             self.last_primary_update = now
 
     def run(self):

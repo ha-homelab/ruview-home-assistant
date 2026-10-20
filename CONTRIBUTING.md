@@ -8,6 +8,14 @@ Do not contribute live payload dumps, credentials, private hostnames, device inv
 
 The generic bridge is intentionally separate from deployment inventories and analytical engines. Improvements should be configurable, testable offline and honest about experimental recognition behavior.
 
+For an eligible trusted-author PR, the `auto-approve` label requests the separate
+reviewer workflow and `automerge` requests the shared merger. Both labels are
+needed for that complete automated path. The merger requires a current
+independent approval, the successful `CI gate`, resolved review threads and a
+current base before performing a normal squash merge. It does not bypass branch
+rules. Approval and merge jobs inspect GitHub metadata without running PR code
+with their credentials; public CI and merge automation use GitHub-hosted runners.
+
 
 ## Project participation
 

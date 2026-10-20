@@ -427,7 +427,7 @@ class ModuleObservationsTests(unittest.TestCase):
         original_core = copy.deepcopy(self.core)
         ordinary_calls = []
 
-        def ordinary(current):
+        def ordinary(current, **kwargs):
             ordinary_calls.append(copy.deepcopy(current))
             self.assertEqual(bridge.client.publish.call_count, 2)
             clock[0] += 1.7
