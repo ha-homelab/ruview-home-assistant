@@ -2,6 +2,10 @@
 
 ## [0.1.3] - 2026-10-20
 
+### Fuzz validation
+
+- Add bounded public-RC fuzzing of production input boundaries, committed seeds, regression checks and source-bound campaign evidence. Beta and ordinary CI events do not run timed mutation.
+
 ### Fixed
 
 - Recheck each node's primary and edge-fall freshness after module processing,

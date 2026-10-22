@@ -1,5 +1,7 @@
 # RuView Home Assistant
 
+[![RC fuzzing](https://img.shields.io/badge/fuzzing-RC_only-0a9f8f)](docs/fuzzing.md)
+
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15577/badge)](https://www.bestpractices.dev/projects/15577)
 
 **Experimental observations, not validated occupancy detection.**

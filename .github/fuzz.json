@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "language": "python",
+  "setup": [
+    [
+      "python3",
+      "-m",
+      "venv",
+      ".fuzz-venv"
+    ],
+    [
+      ".fuzz-venv/bin/python",
+      "-m",
+      "pip",
+      "install",
+      "--require-hashes",
+      "--only-binary=:all:",
+      "-r",
+      ".github/requirements-fuzz.txt"
+    ]
+  ],
+  "targets": [
+    {
+      "name": "module-freshness",
+      "engine": "atheris",
+      "command": [
+        ".fuzz-venv/bin/python",
+        "fuzz/fuzz_modules.py",
+        "-max_len=8192"
+      ],
+      "seconds": 60,
+      "corpus": "fuzz/corpus/module-freshness",
+      "instrumentation": [
+        {
+          "module": "ruview_home_assistant.module_observations",
+          "functions": [
+            "decode",
+            "current",
+            "age"
+          ]
+        }
+      ]
+    }
+  ],
+  "preflight-paths": [
+    "src/ruview_home_assistant",
+    "fuzz",
+    "tests"
+  ]
+}
