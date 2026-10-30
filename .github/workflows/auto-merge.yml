@@ -18,8 +18,11 @@ permissions:
   contents: read
 jobs:
   auto-merge:
+    # Dependabot review events cannot read Actions secrets. The trusted target and
+    # workflow-completion events still evaluate this PR with the existing token.
     if: >-
-      ((github.event_name == 'pull_request_target' || github.event_name == 'pull_request_review') &&
+      ((github.event_name == 'pull_request_target' ||
+        (github.event_name == 'pull_request_review' && github.actor != 'dependabot[bot]')) &&
        github.event.pull_request.head.repo.full_name == github.repository &&
        contains(fromJSON('["4alvit","californiantiramisu","dependabot[bot]","renovate[bot]"]'), github.event.pull_request.user.login)) ||
       (contains(fromJSON('["workflow_run","status","check_run","schedule","workflow_dispatch"]'), github.event_name) &&
