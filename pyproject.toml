@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ruview-home-assistant"
-version = "0.1.3"
+version = "0.1.4"
 description = "Experimental, freshness-gated RuView observations for Home Assistant MQTT discovery"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,7 +15,7 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Topic :: Home Automation",
 ]
-dependencies = ["paho-mqtt==2.1.0", "websockets==17.2"]
+dependencies = ["paho-mqtt==2.1.0", "websockets==17.4"]
 
 [project.optional-dependencies]
 dev = ["build==1.2.2.post1", "ruff==0.16.5", "jsonschema==4.23.0", "cryptography==50.0.1"]

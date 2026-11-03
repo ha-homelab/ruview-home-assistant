@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.4] - Unreleased
+
+### Security
+
+- Pin websockets 17.4 to address [GHSA-6m5v-9gmr-5665](https://github.com/python-websockets/websockets/security/advisories/GHSA-6m5v-9gmr-5665). Earlier versions could retain unbounded empty fragments during whole-message reads from an untrusted or compromised WebSocket peer. The patched dependency limits fragmented messages.
+- Exercise the actual dependency with bounded offline fragment tests; no device or live-service acceptance is implied.
+
+### Upgrade
+
+Install the verified 0.1.4 package or rebuild the documented container to receive the patched dependency. Preserve existing upstream, MQTT and TLS settings and the previous verified package for rollback. Publication does not deploy the bridge or update device firmware.
+
 ## [0.1.3] - 2026-10-20
 
 ### Fuzz validation
