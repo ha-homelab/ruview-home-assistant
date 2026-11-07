@@ -79,6 +79,7 @@ class AutoMergeEventsTests(unittest.TestCase):
         if has_pr:
             data["github"]["event"]["pull_request"] = {
                 "user": {"login": author},
+                "base": {"ref": "main"},
                 "head": {"repo": {"full_name": "example/repo" if same_repo else "other/fork"}},
             }
         return bool(evaluate(self.condition, data))
@@ -87,10 +88,10 @@ class AutoMergeEventsTests(unittest.TestCase):
         self.assertFalse(self.allowed("pull_request_review", actor="dependabot[bot]"))
         self.assertTrue(self.allowed("pull_request_target", actor="dependabot[bot]"))
 
-    def test_ordinary_review_wakeups_are_preserved(self):
+    def test_pr_controlled_review_wakeups_are_rejected(self):
         for actor in ("4alvit", "californiantiramisu", "github-actions[bot]"):
             with self.subTest(actor=actor):
-                self.assertTrue(self.allowed("pull_request_review", actor=actor))
+                self.assertFalse(self.allowed("pull_request_review", actor=actor))
 
     def test_completion_and_schedule_paths_need_default_branch(self):
         for event in ("workflow_run", "status", "check_run", "schedule", "workflow_dispatch"):
