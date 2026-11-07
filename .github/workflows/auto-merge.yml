@@ -33,7 +33,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: victron-venus/venus-os-ci-toolkit/.github/workflows/auto-merge.yml@6b2d99519d513d2b871d2a845ddd6134dea4af2c # main
+    uses: victron-venus/venus-os-ci-toolkit/.github/workflows/auto-merge.yml@ffa568e48a9510bf66dcfe01d6646f6840382431 # main
     with:
       runner-labels: '["ubuntu-24.04"]'
       # Match the public source owner's reviewed author/privacy policy.
