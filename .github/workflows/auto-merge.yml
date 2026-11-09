@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: victron-venus/venus-os-ci-toolkit/.github/workflows/auto-merge.yml@0047a13b5eb79dfa770e31070a83e9696ddd36d1 # main
+    uses: victron-venus/venus-os-ci-toolkit/.github/workflows/auto-merge.yml@42c1200e7ec4ce7ed32fa1c9e7492449b1f04b80 # main
     with:
       runner-labels: '["ubuntu-24.04"]'
       # Include the existing owned Renovate account in reviewed merges.
