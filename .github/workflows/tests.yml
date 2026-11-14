@@ -45,14 +45,22 @@ jobs:
       - name: Check installed packages and production replay without a network
         run: |
           docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges ruview-ci --version
-          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint python3 -i ruview-ci - <<'PY'
+          pip_version=$(python3 - <<'PY_LOCK'
+          import re
+          from pathlib import Path
+          pins = re.findall(r"^pip==([^\s\\]+)", Path("container/requirements-installer.txt").read_text(), re.MULTILINE)
+          assert len(pins) == 1, "Expected exactly one locked installer version"
+          print(pins[0])
+          PY_LOCK
+          )
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --env "EXPECTED_INSTALLER_PIN=$pip_version" --entrypoint python3 -i ruview-ci - <<'PY'
           import importlib.metadata
           import os
           import paho.mqtt.client
           import websockets
           from ruview_home_assistant.replay import replay, synthetic_frames
           assert os.getuid() == 10001
-          assert importlib.metadata.version("pip") == "26.2.1"
+          assert importlib.metadata.version("pip") == os.environ["EXPECTED_INSTALLER_PIN"]
           results = [replay(frame) for frame in synthetic_frames()]
           assert [item["occupancy_entity"] for item in results] == ["ON", "ON", "OFF", "unavailable", "unavailable"]
           assert all(item["synthetic"] for item in results)
