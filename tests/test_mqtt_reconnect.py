@@ -5,6 +5,7 @@ import json
 import struct
 import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock, patch
 
 import paho.mqtt.client as mqtt
@@ -189,7 +190,6 @@ class ReconnectTests(unittest.TestCase):
     def test_preconnect_waits_for_a_writer_that_already_passed_the_old_gate(self):
         entered, release = threading.Event(), threading.Event()
         connecting, prepared = threading.Event(), threading.Event()
-        errors = []
         original_publish = self.client.publish
 
         def held_publish(*args, **kwargs):
@@ -199,40 +199,31 @@ class ReconnectTests(unittest.TestCase):
             return original_publish(*args, **kwargs)
 
         def publish_old():
-            try:
+            # Paho has already closed the old socket before pre-connect.
+            with self.assertRaises(ConnectionError):
                 self.bridge.publish("ruview/home/node1/state", {"presence": "ON"})
-            except ConnectionError:
-                pass  # Paho has already closed the old socket before pre-connect.
-            except BaseException as error:
-                errors.append(error)
 
         def prepare_connection():
-            try:
-                self.client._messages_reconnect_reset()
-                connecting.set()
-                self.client.on_pre_connect(self.client, None)
-                prepared.set()
-            except BaseException as error:
-                errors.append(error)
+            self.client._messages_reconnect_reset()
+            connecting.set()
+            self.client.on_pre_connect(self.client, None)
+            prepared.set()
 
         self.client._send_publish.return_value = mqtt.MQTT_ERR_NO_CONN
-        with patch.object(self.client, "publish", side_effect=held_publish):
-            publisher = threading.Thread(target=publish_old)
-            preparation = threading.Thread(target=prepare_connection)
-            publisher.start()
+        with (
+            patch.object(self.client, "publish", side_effect=held_publish),
+            ThreadPoolExecutor(max_workers=2) as pool,
+        ):
+            publisher = pool.submit(publish_old)
             try:
                 self.assertTrue(entered.wait(2))
-                preparation.start()
+                preparation = pool.submit(prepare_connection)
                 self.assertTrue(connecting.wait(2))
                 self.assertFalse(prepared.wait(0.05))
             finally:
                 release.set()
-                publisher.join(2)
-                if preparation.ident is not None:
-                    preparation.join(2)
-        self.assertFalse(publisher.is_alive())
-        self.assertFalse(preparation.is_alive())
-        self.assertEqual(errors, [])
+            publisher.result(timeout=2)
+            preparation.result(timeout=2)
         self.assertTrue(prepared.is_set())
         self.assertFalse(self.bridge._connection_ready.is_set())
         self.assertEqual(len(self.client._out_messages), 1)
@@ -247,7 +238,6 @@ class ReconnectTests(unittest.TestCase):
         self.bridge.publish("ruview/home/node1/state", {"presence": "ON"})
         entered, release = threading.Event(), threading.Event()
         attempted, completed = threading.Event(), threading.Event()
-        errors = []
         original_drop = self.client.drop_out_messages
 
         def held_drop():
@@ -256,38 +246,27 @@ class ReconnectTests(unittest.TestCase):
                 raise AssertionError("test did not release discard")
             return original_drop()
 
-        def reconnect():
-            try:
-                self.reconnect()
-            except BaseException as error:
-                errors.append(error)
-
         def publish_fresh():
             try:
                 attempted.set()
                 self.bridge.publish("ruview/home/node1/state", {"presence": "OFF"})
-            except BaseException as error:
-                errors.append(error)
             finally:
                 completed.set()
 
-        with patch.object(self.client, "drop_out_messages", side_effect=held_drop):
-            connection = threading.Thread(target=reconnect)
-            publisher = threading.Thread(target=publish_fresh)
-            connection.start()
+        with (
+            patch.object(self.client, "drop_out_messages", side_effect=held_drop),
+            ThreadPoolExecutor(max_workers=2) as pool,
+        ):
+            connection = pool.submit(self.reconnect)
             try:
                 self.assertTrue(entered.wait(2))
-                publisher.start()
+                publisher = pool.submit(publish_fresh)
                 self.assertTrue(attempted.wait(2))
                 self.assertFalse(completed.wait(0.05))
             finally:
                 release.set()
-                connection.join(2)
-                if publisher.ident is not None:
-                    publisher.join(2)
-        self.assertFalse(connection.is_alive())
-        self.assertFalse(publisher.is_alive())
-        self.assertEqual(errors, [])
+            self.assertEqual(connection.result(timeout=2), mqtt.MQTT_ERR_SUCCESS)
+            publisher.result(timeout=2)
         pending = list(self.client._out_messages.values())
         self.assertEqual(len(pending), 1)
         self.assertEqual(json.loads(pending[0].payload), {"presence": "OFF"})
