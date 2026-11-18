@@ -6,6 +6,10 @@
 
 - Honor MQTT reconnect and Home Assistant discovery requests received while an
   announcement is in progress. Retry interrupted announcements on the next poll.
+- Discard unacknowledged MQTT observations before reconnect replay so expired
+  presence, fall and module states cannot be republished as current. Coordinate
+  publication with connection readiness, then regenerate discovery and fresh
+  state without losing inflight capacity.
 
 ### Security
 
