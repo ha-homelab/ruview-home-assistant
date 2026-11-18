@@ -13,6 +13,7 @@ import signal
 import threading
 import time
 import urllib.request
+from contextlib import nullcontext
 
 from . import module_observations
 from .config import Config
@@ -328,10 +329,13 @@ class Bridge:
     prefix = PREFIX
     discovery_prefix = "homeassistant"
     identifier_prefix = "ruview_home"
+    _publication_lock = nullcontext()
+    _connection_ready = None
 
     def __init__(self, client, config=None):
         self.config = Config.from_env() if config is None else config
         self.client = client
+        self._publication_lock = threading.Lock()
         self.prefix = self.config.topic_prefix
         self.discovery_prefix = self.config.discovery_prefix
         self.identifier_prefix = self.config.identifier_prefix
@@ -533,9 +537,14 @@ class Bridge:
     def publish(self, topic, payload, retain=False):
         if isinstance(payload, dict):
             payload = json.dumps(payload, allow_nan=False)
-        result = self.client.publish(topic, payload, qos=1, retain=retain)
-        if result.rc:
-            raise ConnectionError("MQTT publish was not accepted")
+        with self._publication_lock:
+            if self._connection_ready is not None and (
+                not self._connection_ready.is_set() or not self.client.is_connected()
+            ):
+                raise ConnectionError("MQTT connection is not ready for publication")
+            result = self.client.publish(topic, payload, qos=1, retain=retain)
+            if result.rc:
+                raise ConnectionError("MQTT publish was not accepted")
 
     def announce(self):
         # Consume the pending request before publishing so callbacks during
@@ -759,15 +768,30 @@ def main(argv=None):
     client.max_queued_messages_set(100)
     client.reconnect_delay_set(1, 30)
     bridge = Bridge(client, config)
+    bridge._connection_ready = threading.Event()
 
     def connected(_client, _userdata, _flags, reason_code, _properties):
         if reason_code.is_failure:
+            bridge._connection_ready.clear()
             logging.error("MQTT authentication/connect rejected")
             return
+        # Paho calls this before replaying unacknowledged QoS messages. Their
+        # observation leases may have expired; rebuild discovery and fresh state.
+        with bridge._publication_lock:
+            _client.drop_out_messages()
+            bridge.rediscover.set()
+            bridge._connection_ready.set()
         logging.info("MQTT connected")
-        bridge.rediscover.set()
         client.subscribe(f"{config.discovery_prefix}/status", qos=1)
 
+    def connecting(_client, _userdata):
+        # Finish any publication that passed the old gate before Paho opens a
+        # new socket. Otherwise it could enter the new connection's inflight set.
+        with bridge._publication_lock:
+            bridge._connection_ready.clear()
+
+    client.on_pre_connect = connecting
+    client.on_disconnect = lambda *_: bridge._connection_ready.clear()
     client.on_connect = connected
     client.on_message = lambda *_: bridge.rediscover.set()
     for sig in (signal.SIGTERM, signal.SIGINT):
