@@ -2,6 +2,11 @@
 
 ## [0.1.4] - Unreleased
 
+### Fixed
+
+- Honor MQTT reconnect and Home Assistant discovery requests received while an
+  announcement is in progress. Retry interrupted announcements on the next poll.
+
 ### Security
 
 - Pin websockets 17.4 to address [GHSA-6m5v-9gmr-5665](https://github.com/python-websockets/websockets/security/advisories/GHSA-6m5v-9gmr-5665). Earlier versions could retain unbounded empty fragments during whole-message reads from an untrusted or compromised WebSocket peer. The patched dependency limits fragmented messages.

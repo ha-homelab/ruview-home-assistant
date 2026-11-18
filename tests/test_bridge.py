@@ -294,6 +294,40 @@ class ObservationTests(unittest.TestCase):
         self.assertEqual(len(payload["availability"]), 3)
 
 
+class DiscoveryTests(unittest.TestCase):
+    def setUp(self):
+        from ruview_home_assistant.config import Config
+
+        self.bridge = Bridge(Mock(), Config(node_ids=(1,)))
+        self.bridge.rediscover.set()
+
+    def test_request_during_announcement_is_kept_for_next_poll(self):
+        def publish(*_args, **_kwargs):
+            self.bridge.rediscover.set()
+
+        self.bridge.publish = Mock(side_effect=publish)
+        self.bridge.announce()
+        self.assertTrue(self.bridge.rediscover.is_set())
+
+        self.bridge.publish.side_effect = None
+        self.bridge.publish.reset_mock()
+        self.bridge.update({})
+        self.assertTrue(
+            any(
+                call.args[0].endswith("/config")
+                for call in self.bridge.publish.call_args_list
+            )
+        )
+        self.assertFalse(self.bridge.rediscover.is_set())
+
+    def test_failed_announcement_requests_retry(self):
+        self.bridge.rediscover.clear()
+        self.bridge.publish = Mock(side_effect=ConnectionError("queue full"))
+        with self.assertRaises(ConnectionError):
+            self.bridge.announce()
+        self.assertTrue(self.bridge.rediscover.is_set())
+
+
 class PublicationCadenceTests(unittest.TestCase):
     def test_fresh_module_ticks_preserve_ordinary_recorder_cadence(self):
         bridge = Bridge.__new__(Bridge)

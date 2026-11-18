@@ -538,26 +538,32 @@ class Bridge:
             raise ConnectionError("MQTT publish was not accepted")
 
     def announce(self):
-        for node_id in self.known:
-            for key in (*ENTITIES, "fall_detected"):
-                topic, payload = discovery(
-                    node_id,
-                    key,
-                    prefix=self.prefix,
-                    discovery_prefix=self.discovery_prefix,
-                    identifier_prefix=self.identifier_prefix,
-                )
-                self.publish(topic, payload, retain=True)
-            if self.module_url:
-                topic, payload = module_discovery(
-                    node_id,
-                    prefix=self.prefix,
-                    discovery_prefix=self.discovery_prefix,
-                    identifier_prefix=self.identifier_prefix,
-                )
-                self.publish(topic, payload, retain=True)
-        self.last_discovery = time.monotonic()
+        # Consume the pending request before publishing so callbacks during
+        # publication can schedule a new announcement for the next poll.
         self.rediscover.clear()
+        try:
+            for node_id in self.known:
+                for key in (*ENTITIES, "fall_detected"):
+                    topic, payload = discovery(
+                        node_id,
+                        key,
+                        prefix=self.prefix,
+                        discovery_prefix=self.discovery_prefix,
+                        identifier_prefix=self.identifier_prefix,
+                    )
+                    self.publish(topic, payload, retain=True)
+                if self.module_url:
+                    topic, payload = module_discovery(
+                        node_id,
+                        prefix=self.prefix,
+                        discovery_prefix=self.discovery_prefix,
+                        identifier_prefix=self.identifier_prefix,
+                    )
+                    self.publish(topic, payload, retain=True)
+        except OSError:
+            self.rediscover.set()
+            raise
+        self.last_discovery = time.monotonic()
 
     def update(self, current, observed_at=None, *, clock=None):
         clock = time.monotonic if clock is None else clock
