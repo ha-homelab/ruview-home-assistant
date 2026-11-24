@@ -1,7 +1,30 @@
 # Changelog
 
-## [0.1.4] - Unreleased
+## [0.1.5] - Unreleased
 
+### Changed
+
+- Discard stale observations on MQTT reconnect (#72).
+- Preserve MQTT discovery requests during publication (#71).
+- add a navigation index for docs/.
+- verify current default branch before reviewed merges (#51).
+- complete reviewed dependency approval and merge wiring (#50).
+- stop CI regeneration unless the toolkit checkout is verified (#48).
+- skip heavy validation for documentation-only changes (#47).
+- Complete dependency update migration to Renovate (#46).
+- recheck automatic publication source (#40).
+- reconcile lost creation responses (#39).
+
+### Upgrade
+
+Install the verified 0.1.4 package or rebuild the documented container to receive the patched dependency. Preserve existing upstream, MQTT and TLS settings and the previous verified package for rollback. Publication does not deploy the bridge or update device firmware.
+
+### Security
+
+- Pin websockets 17.4 to address [GHSA-6m5v-9gmr-5665](https://github.com/python-websockets/websockets/security/advisories/GHSA-6m5v-9gmr-5665). Earlier versions could retain unbounded empty fragments during whole-message reads from an untrusted or compromised WebSocket peer. The patched dependency limits fragmented messages.
+- Exercise the actual dependency with bounded offline fragment tests; no device or live-service acceptance is implied.
+
+## [0.1.4] - 2026-11-03
 ### Fixed
 
 - Honor MQTT reconnect and Home Assistant discovery requests received while an
